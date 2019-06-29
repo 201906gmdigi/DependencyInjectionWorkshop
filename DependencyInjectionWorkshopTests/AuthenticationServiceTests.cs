@@ -55,6 +55,13 @@ namespace DependencyInjectionWorkshopTests
             ShouldBeInvalid(isValid);
         }
 
+        [Test]
+        public void should_notify_when_invalid()
+        {
+            WhenInvalid();
+            _notification.Received().PushMessage(Arg.Is<string>(m => m.Contains(DefaultAccount)));
+        }
+
         private static void ShouldBeInvalid(bool isValid)
         {
             Assert.IsFalse(isValid);
@@ -63,6 +70,16 @@ namespace DependencyInjectionWorkshopTests
         private static void ShouldBeValid(bool isValid)
         {
             Assert.IsTrue(isValid);
+        }
+
+        private bool WhenInvalid()
+        {
+            GivenPasswordFromDb(DefaultAccount, DefaultHashedPassword);
+            GivenHashPassword(DefaultInputPassword, DefaultHashedPassword);
+            GivenOtp(DefaultAccount, DefaultOtp);
+
+            var isValid = WhenVerify(DefaultAccount, DefaultInputPassword, "wrong otp");
+            return isValid;
         }
 
         private bool WhenVerify(string accountId, string password, string otp)
