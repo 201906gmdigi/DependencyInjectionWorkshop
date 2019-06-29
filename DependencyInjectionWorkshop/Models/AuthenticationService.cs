@@ -2,12 +2,32 @@
 {
     public class AuthenticationService
     {
-        private readonly FailedCounter _failedCounter = new FailedCounter();
-        private readonly NLogAdapter _nLogAdapter = new NLogAdapter();
-        private readonly OtpService _otpService = new OtpService();
-        private readonly ProfileDao _profileDao = new ProfileDao();
-        private readonly Sha256Adapter _sha256Adapter = new Sha256Adapter();
-        private readonly SlackAdapter _slackAdapter = new SlackAdapter();
+        private readonly ProfileDao _profileDao;
+        private readonly SlackAdapter _slackAdapter;
+        private readonly Sha256Adapter _sha256Adapter;
+        private readonly FailedCounter _failedCounter;
+        private readonly OtpService _otpService;
+        private readonly NLogAdapter _nLogAdapter;
+
+        public AuthenticationService(ProfileDao profileDao, SlackAdapter slackAdapter, Sha256Adapter sha256Adapter, FailedCounter failedCounter, OtpService otpService, NLogAdapter nLogAdapter)
+        {
+            _profileDao = profileDao;
+            _slackAdapter = slackAdapter;
+            _sha256Adapter = sha256Adapter;
+            _failedCounter = failedCounter;
+            _otpService = otpService;
+            _nLogAdapter = nLogAdapter;
+        }
+
+        public AuthenticationService()
+        {
+            _profileDao = new ProfileDao();
+            _slackAdapter = new SlackAdapter();
+            _sha256Adapter = new Sha256Adapter();
+            _failedCounter = new FailedCounter();
+            _otpService = new OtpService();
+            _nLogAdapter = new NLogAdapter();
+        }
 
         public bool Verify(string accountId, string password, string otp)
         {
