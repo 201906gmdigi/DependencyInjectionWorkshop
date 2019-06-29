@@ -7,32 +7,67 @@ namespace DependencyInjectionWorkshopTests
     [TestFixture]
     public class AuthenticationServiceTests
     {
+        private const string DefaultAccount = "joey";
+        private const string DefaultInputPassword = "9487";
+        private const string DefaultOtp = "9527";
+        private const string DefaultHashedPassword = "abc";
+        private AuthenticationService _authenticationService;
+        private IFailedCounter _failedCounter;
+        private IHash _hash;
+        private ILogger _logger;
+        private INotification _notification;
+        private IOtpService _otpService;
+        private IProfile _profile;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _logger = Substitute.For<ILogger>();
+            _notification = Substitute.For<INotification>();
+            _failedCounter = Substitute.For<IFailedCounter>();
+            _otpService = Substitute.For<IOtpService>();
+            _hash = Substitute.For<IHash>();
+            _profile = Substitute.For<IProfile>();
+
+            _authenticationService =
+                new AuthenticationService(_logger, _profile, _notification, _hash, _failedCounter, _otpService);
+        }
+
         [Test]
         public void is_valid()
         {
-            var profile = Substitute.For<IProfile>();
-            var hash = Substitute.For<IHash>();
-            var otpService = Substitute.For<IOtpService>();
-            var failedCounter = Substitute.For<IFailedCounter>();
-            var notification = Substitute.For<INotification>();
-            var logger = Substitute.For<ILogger>();
+            GivenPasswordFromDb(DefaultAccount, DefaultHashedPassword);
+            GivenHashPassword(DefaultInputPassword, DefaultHashedPassword);
+            GivenOtp(DefaultAccount, DefaultOtp);
 
-            var authenticationService = new AuthenticationService(
-                logger,
-                profile,
-                notification,
-                hash,
-                failedCounter,
-                otpService);
+            var isValid = WhenVerify(DefaultAccount, DefaultInputPassword, DefaultOtp);
+            ShouldBeValid(isValid);
+        }
 
-            profile.GetPassword("joey").ReturnsForAnyArgs("abc");
-            hash.Compute("9487").ReturnsForAnyArgs("abc");
-
-            otpService.GetCurrentOtp("joey").ReturnsForAnyArgs("9527");
-
-            var isValid = authenticationService.Verify("joey", "9487", "9527");
-
+        private static void ShouldBeValid(bool isValid)
+        {
             Assert.IsTrue(isValid);
+        }
+
+        private bool WhenVerify(string accountId, string password, string otp)
+        {
+            var isValid = _authenticationService.Verify(accountId, password, otp);
+            return isValid;
+        }
+
+        private void GivenOtp(string accountId, string otp)
+        {
+            _otpService.GetCurrentOtp(accountId).ReturnsForAnyArgs(otp);
+        }
+
+        private void GivenHashPassword(string password, string hashedPassword)
+        {
+            _hash.Compute(password).ReturnsForAnyArgs(hashedPassword);
+        }
+
+        private void GivenPasswordFromDb(string accountId, string passwordFromDb)
+        {
+            _profile.GetPassword(accountId).ReturnsForAnyArgs(passwordFromDb);
         }
     }
 }
