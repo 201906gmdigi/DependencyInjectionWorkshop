@@ -1,4 +1,6 @@
-﻿namespace DependencyInjectionWorkshop.Models
+﻿using System;
+
+namespace DependencyInjectionWorkshop.Models
 {
     public class AuthenticationService
     {

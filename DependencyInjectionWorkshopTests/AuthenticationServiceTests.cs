@@ -1,4 +1,5 @@
-﻿using DependencyInjectionWorkshop.Models;
+﻿using System;
+using DependencyInjectionWorkshop.Models;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -11,6 +12,7 @@ namespace DependencyInjectionWorkshopTests
         private const string DefaultInputPassword = "9487";
         private const string DefaultOtp = "9527";
         private const string DefaultHashedPassword = "abc";
+        private const int DefaultFailedCount = 91;
         private AuthenticationService _authenticationService;
         private IFailedCounter _failedCounter;
         private IHash _hash;
@@ -62,9 +64,34 @@ namespace DependencyInjectionWorkshopTests
             ShouldNotify(DefaultAccount);
         }
 
-        private void ShouldNotify(string account)
+        [Test]
+        public void should_add_failed_count_when_invalid()
         {
-            _notification.Received().PushMessage(Arg.Is<string>(m => m.Contains(account)));
+            WhenInvalid();
+            ShouldAddFailedCount(DefaultAccount);
+        }
+
+        [Test]
+        public void should_reset_failed_count_when_valid()
+        {
+            WhenValid();
+            ShouldResetFailedCount(DefaultAccount);
+        }
+
+        [Test]
+        public void should_log_failed_count_when_invalid()
+        {
+            GivenFailedCount(DefaultFailedCount);
+            WhenInvalid();
+
+            ShouldLog(DefaultAccount, DefaultFailedCount.ToString());
+        }
+
+        [Test]
+        public void account_is_locked()
+        {
+            GivenAccountIsLocked();
+            ShouldThrow<FailedTooManyTimesException>();
         }
 
         private static void ShouldBeInvalid(bool isValid)
@@ -75,6 +102,53 @@ namespace DependencyInjectionWorkshopTests
         private static void ShouldBeValid(bool isValid)
         {
             Assert.IsTrue(isValid);
+        }
+
+        private void ShouldThrow<TException>() where TException : Exception
+        {
+            TestDelegate action = () => WhenValid();
+
+            Assert.Throws<TException>(action);
+        }
+
+        private void GivenAccountIsLocked()
+        {
+            _failedCounter.IsAccountLocked(DefaultAccount).ReturnsForAnyArgs(true);
+        }
+
+        private void ShouldLog(string account, string failedCount)
+        {
+            _logger.Received().Info(Arg.Is<string>(m => m.Contains(account) && m.Contains(failedCount)));
+        }
+
+        private void GivenFailedCount(int failedCount)
+        {
+            _failedCounter.GetFailedCount(DefaultAccount).ReturnsForAnyArgs(failedCount);
+        }
+
+        private void ShouldResetFailedCount(string accountId)
+        {
+            _failedCounter.Received().ResetFailedCount(accountId);
+        }
+
+        private bool WhenValid()
+        {
+            GivenPasswordFromDb(DefaultAccount, DefaultHashedPassword);
+            GivenHashPassword(DefaultInputPassword, DefaultHashedPassword);
+            GivenOtp(DefaultAccount, DefaultOtp);
+
+            var isValid = WhenVerify(DefaultAccount, DefaultInputPassword, DefaultOtp);
+            return isValid;
+        }
+
+        private void ShouldAddFailedCount(string accountId)
+        {
+            _failedCounter.Received().AddFailedCount(accountId);
+        }
+
+        private void ShouldNotify(string account)
+        {
+            _notification.Received().PushMessage(Arg.Is<string>(m => m.Contains(account)));
         }
 
         private bool WhenInvalid()
