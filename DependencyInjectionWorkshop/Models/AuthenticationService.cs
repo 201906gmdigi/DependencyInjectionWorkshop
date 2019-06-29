@@ -22,33 +22,11 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException();
             }
 
-            string currentPassword;
-            using (var connection = new SqlConnection("datasource=db,password=abc"))
-            {
-                currentPassword = connection.Query<string>("spGetUserPassword", new {Id = accountId},
-                                                           commandType: CommandType.StoredProcedure).SingleOrDefault();
-            }
+            var currentPassword = GetCurrentPasswordFromDb(accountId);
 
-            var crypt = new System.Security.Cryptography.SHA256Managed();
-            var hash = new StringBuilder();
-            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
-            foreach (var theByte in crypto)
-            {
-                hash.Append(theByte.ToString("x2"));
-            }
+            var hashPassword = GetHashPassword(password);
 
-            var hashPassword = hash.ToString();
-
-            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
-            string currentOtp;
-            if (response.IsSuccessStatusCode)
-            {
-                currentOtp = response.Content.ReadAsAsync<string>().Result;
-            }
-            else
-            {
-                throw new Exception($"web api error, accountId:{accountId}");
-            }
+            var currentOtp = GetCurrentOtp(accountId, httpClient);
 
             if (hashPassword == currentPassword && otp == currentOtp)
             {
@@ -76,6 +54,48 @@ namespace DependencyInjectionWorkshop.Models
 
                 return false;
             }
+        }
+
+        private static string GetCurrentOtp(string accountId, HttpClient httpClient)
+        {
+            var response = httpClient.PostAsJsonAsync("api/otps", accountId).Result;
+            string currentOtp;
+            if (response.IsSuccessStatusCode)
+            {
+                currentOtp = response.Content.ReadAsAsync<string>().Result;
+            }
+            else
+            {
+                throw new Exception($"web api error, accountId:{accountId}");
+            }
+
+            return currentOtp;
+        }
+
+        private static string GetHashPassword(string password)
+        {
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            var hash = new StringBuilder();
+            var crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(password));
+            foreach (var theByte in crypto)
+            {
+                hash.Append(theByte.ToString("x2"));
+            }
+
+            var hashPassword = hash.ToString();
+            return hashPassword;
+        }
+
+        private static string GetCurrentPasswordFromDb(string accountId)
+        {
+            string currentPassword;
+            using (var connection = new SqlConnection("datasource=db,password=abc"))
+            {
+                currentPassword = connection.Query<string>("spGetUserPassword", new {Id = accountId},
+                                                           commandType: CommandType.StoredProcedure).SingleOrDefault();
+            }
+
+            return currentPassword;
         }
     }
 
