@@ -14,10 +14,8 @@ namespace DependencyInjectionWorkshop.Models
         public bool Verify(string accountId, string password, string otp)
         {
             var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
-            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId).Result;
-
-            isLockedResponse.EnsureSuccessStatusCode();
-            if (isLockedResponse.Content.ReadAsAsync<bool>().Result)
+            var isLocked = IsAccountLocked(accountId, httpClient);
+            if (isLocked)
             {
                 throw new FailedTooManyTimesException();
             }
@@ -30,30 +28,65 @@ namespace DependencyInjectionWorkshop.Models
 
             if (hashPassword == currentPassword && otp == currentOtp)
             {
-                var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", accountId).Result;
-                resetResponse.EnsureSuccessStatusCode();
+                ResetFailedCount(accountId, httpClient);
 
                 return true;
             }
             else
             {
-                var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", accountId).Result;
-                addFailedCountResponse.EnsureSuccessStatusCode();
+                AddFailedCount(accountId, httpClient);
 
-                var failedCountResponse =
-                    httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", accountId).Result;
+                LogFailedCount(accountId, httpClient);
 
-                failedCountResponse.EnsureSuccessStatusCode();
-
-                var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
-                var logger = NLog.LogManager.GetCurrentClassLogger();
-                logger.Info($"accountId:{accountId} failed times:{failedCount}");
-
-                var slackClient = new SlackClient("my api token");
-                slackClient.PostMessage(postMessageResponse => { }, "my channel", "my message", "my bot name");
+                PushMessage();
 
                 return false;
             }
+        }
+
+        private static bool IsAccountLocked(string accountId, HttpClient httpClient)
+        {
+            var isLockedResponse = httpClient.PostAsJsonAsync("api/failedCounter/IsLocked", accountId).Result;
+
+            isLockedResponse.EnsureSuccessStatusCode();
+            var isLocked = isLockedResponse.Content.ReadAsAsync<bool>().Result;
+            return isLocked;
+        }
+
+        private static void PushMessage()
+        {
+            var slackClient = new SlackClient("my api token");
+            slackClient.PostMessage(postMessageResponse => { }, "my channel", "my message", "my bot name");
+        }
+
+        private static void LogFailedCount(string accountId, HttpClient httpClient)
+        {
+            var failedCount = GetFailedCount(accountId, httpClient);
+            var logger = NLog.LogManager.GetCurrentClassLogger();
+            logger.Info($"accountId:{accountId} failed times:{failedCount}");
+        }
+
+        private static int GetFailedCount(string accountId, HttpClient httpClient)
+        {
+            var failedCountResponse =
+                httpClient.PostAsJsonAsync("api/failedCounter/GetFailedCount", accountId).Result;
+
+            failedCountResponse.EnsureSuccessStatusCode();
+
+            var failedCount = failedCountResponse.Content.ReadAsAsync<int>().Result;
+            return failedCount;
+        }
+
+        private static void AddFailedCount(string accountId, HttpClient httpClient)
+        {
+            var addFailedCountResponse = httpClient.PostAsJsonAsync("api/failedCounter/Add", accountId).Result;
+            addFailedCountResponse.EnsureSuccessStatusCode();
+        }
+
+        private static void ResetFailedCount(string accountId, HttpClient httpClient)
+        {
+            var resetResponse = httpClient.PostAsJsonAsync("api/failedCounter/Reset", accountId).Result;
+            resetResponse.EnsureSuccessStatusCode();
         }
 
         private static string GetCurrentOtp(string accountId, HttpClient httpClient)
