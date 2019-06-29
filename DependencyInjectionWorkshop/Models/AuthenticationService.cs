@@ -2,31 +2,32 @@
 {
     public class AuthenticationService
     {
-        private readonly ProfileDao _profileDao;
-        private readonly SlackAdapter _slackAdapter;
-        private readonly Sha256Adapter _sha256Adapter;
-        private readonly FailedCounter _failedCounter;
-        private readonly OtpService _otpService;
-        private readonly NLogAdapter _nLogAdapter;
+        private readonly IFailedCounter _failedCounter;
+        private readonly IHash _hash;
+        private readonly ILogger _logger;
+        private readonly INotification _notification;
+        private readonly IOtpService _otpService;
+        private readonly IProfile _profile;
 
-        public AuthenticationService(ProfileDao profileDao, SlackAdapter slackAdapter, Sha256Adapter sha256Adapter, FailedCounter failedCounter, OtpService otpService, NLogAdapter nLogAdapter)
+        public AuthenticationService(ILogger logger, IProfile profile, INotification notification,
+            IHash hash, IFailedCounter failedCounter, IOtpService otpService)
         {
-            _profileDao = profileDao;
-            _slackAdapter = slackAdapter;
-            _sha256Adapter = sha256Adapter;
+            _logger = logger;
+            _profile = profile;
+            _notification = notification;
+            _hash = hash;
             _failedCounter = failedCounter;
             _otpService = otpService;
-            _nLogAdapter = nLogAdapter;
         }
 
         public AuthenticationService()
         {
-            _profileDao = new ProfileDao();
-            _slackAdapter = new SlackAdapter();
-            _sha256Adapter = new Sha256Adapter();
+            _profile = new ProfileDao();
+            _logger = new NLogAdapter();
+            _notification = new SlackAdapter();
+            _hash = new Sha256Adapter();
             _failedCounter = new FailedCounter();
             _otpService = new OtpService();
-            _nLogAdapter = new NLogAdapter();
         }
 
         public bool Verify(string accountId, string password, string otp)
@@ -37,9 +38,9 @@
                 throw new FailedTooManyTimesException();
             }
 
-            var currentPassword = _profileDao.GetPassword(accountId);
+            var currentPassword = _profile.GetPassword(accountId);
 
-            var hashPassword = _sha256Adapter.Hash(password);
+            var hashPassword = _hash.Compute(password);
 
             var currentOtp = _otpService.GetCurrentOtp(accountId);
 
@@ -54,9 +55,9 @@
                 _failedCounter.AddFailedCount(accountId);
 
                 int failedCount = _failedCounter.GetFailedCount(accountId);
-                _nLogAdapter.Info($"accountId:{accountId} failed times:{failedCount}");
+                _logger.Info($"accountId:{accountId} failed times:{failedCount}");
 
-                _slackAdapter.PushMessage(accountId);
+                _notification.PushMessage(accountId);
 
                 return false;
             }
