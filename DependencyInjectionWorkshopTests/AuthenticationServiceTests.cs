@@ -40,8 +40,8 @@ namespace DependencyInjectionWorkshopTests
         {
             GivenPasswordFromDb(DefaultAccount, DefaultHashedPassword);
             GivenHashPassword(DefaultInputPassword, DefaultHashedPassword);
-            GivenOtp(DefaultAccount, DefaultOtp);
-
+            GivenOtp(DefaultAccount, DefaultOtp); 
+            
             var isValid = WhenVerify(DefaultAccount, DefaultInputPassword, DefaultOtp);
             ShouldBeValid(isValid);
         }

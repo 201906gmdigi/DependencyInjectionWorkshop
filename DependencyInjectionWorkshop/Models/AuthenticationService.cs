@@ -59,10 +59,15 @@ namespace DependencyInjectionWorkshop.Models
                 int failedCount = _failedCounter.GetFailedCount(accountId);
                 _logger.Info($"accountId:{accountId} failed times:{failedCount}");
 
-                _notification.PushMessage(accountId);
+                VerifyWithNotification(accountId, _notification);
 
                 return false;
             }
+        }
+
+        private static void VerifyWithNotification(string accountId, INotification notification)
+        {
+            notification.PushMessage(accountId);
         }
     }
 }
