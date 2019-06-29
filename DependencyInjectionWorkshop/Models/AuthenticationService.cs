@@ -9,8 +9,25 @@ using SlackAPI;
 
 namespace DependencyInjectionWorkshop.Models
 {
+    public class ProfileDao
+    {
+        public string GetCurrentPasswordFromDb(string accountId)
+        {
+            string currentPassword;
+            using (var connection = new SqlConnection("datasource=db,password=abc"))
+            {
+                currentPassword = connection.Query<string>("spGetUserPassword", new {Id = accountId},
+                                                           commandType: CommandType.StoredProcedure).SingleOrDefault();
+            }
+
+            return currentPassword;
+        }
+    }
+
     public class AuthenticationService
     {
+        private readonly ProfileDao _profileDao = new ProfileDao();
+
         public bool Verify(string accountId, string password, string otp)
         {
             var httpClient = new HttpClient() {BaseAddress = new Uri("http://joey.com/")};
@@ -20,7 +37,7 @@ namespace DependencyInjectionWorkshop.Models
                 throw new FailedTooManyTimesException();
             }
 
-            var currentPassword = GetCurrentPasswordFromDb(accountId);
+            var currentPassword = _profileDao.GetCurrentPasswordFromDb(accountId);
 
             var hashPassword = GetHashPassword(password);
 
@@ -117,18 +134,6 @@ namespace DependencyInjectionWorkshop.Models
 
             var hashPassword = hash.ToString();
             return hashPassword;
-        }
-
-        private static string GetCurrentPasswordFromDb(string accountId)
-        {
-            string currentPassword;
-            using (var connection = new SqlConnection("datasource=db,password=abc"))
-            {
-                currentPassword = connection.Query<string>("spGetUserPassword", new {Id = accountId},
-                                                           commandType: CommandType.StoredProcedure).SingleOrDefault();
-            }
-
-            return currentPassword;
         }
     }
 
