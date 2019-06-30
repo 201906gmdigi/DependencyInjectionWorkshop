@@ -13,7 +13,17 @@
         public override bool Verify(string accountId, string password, string otp)
         {
             CheckAccountIsLocked(accountId);
-            return base.Verify(accountId, password, otp);
+            var isValid = base.Verify(accountId, password, otp);
+            if (isValid)
+            {
+                _failedCounter.ResetFailedCount(accountId);
+            }
+            else
+            {
+                _failedCounter.AddFailedCount(accountId);
+            }
+
+            return isValid;
         }
 
         private void CheckAccountIsLocked(string accountId)

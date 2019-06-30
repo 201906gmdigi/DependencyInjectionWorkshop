@@ -44,14 +44,10 @@ namespace DependencyInjectionWorkshop.Models
 
             if (hashPassword == currentPassword && otp == currentOtp)
             {
-                _failedCounter.ResetFailedCount(accountId);
-
                 return true;
             }
             else
             {
-                _failedCounter.AddFailedCount(accountId);
-
                 int failedCount = _failedCounter.GetFailedCount(accountId);
                 _logger.Info($"accountId:{accountId} failed times:{failedCount}");
 

@@ -132,7 +132,7 @@ namespace DependencyInjectionWorkshopTests
 
         private void ShouldResetFailedCount(string accountId)
         {
-            _failedCounter.Received().ResetFailedCount(accountId);
+            _failedCounter.Received(1).ResetFailedCount(accountId);
         }
 
         private bool WhenValid()
