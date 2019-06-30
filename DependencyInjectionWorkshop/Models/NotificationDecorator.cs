@@ -1,19 +1,17 @@
 ﻿namespace DependencyInjectionWorkshop.Models
 {
-    public class NotificationDecorator:IAuthentication
+    public class NotificationDecorator : BaseAuthenticationDecorator
     {
-        private readonly IAuthentication _authentication;
         private readonly INotification _notification;
 
-        public NotificationDecorator(IAuthentication authentication, INotification notification)
+        public NotificationDecorator(IAuthentication authentication, INotification notification) : base(authentication)
         {
-            _authentication = authentication;
             _notification = notification;
         }
 
-        public bool Verify(string accountId, string password, string otp)
+        public override bool Verify(string accountId, string password, string otp)
         {
-            var isValid = _authentication.Verify(accountId, password, otp);
+            var isValid = base.Verify(accountId, password, otp);
             if (!isValid)
             {
                 _notification.PushMessage(accountId);
