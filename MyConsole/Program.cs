@@ -1,13 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Extras.DynamicProxy;
 using DependencyInjectionWorkshop.Models;
 
 namespace MyConsole
 {
+    public interface ICacheProvider
+    {
+        object Get(string key);
+
+        void Put(string key, object value, int duration);
+
+        bool Contains(string key);
+    }
+
     class Program
     {
         private static IContainer _container;
@@ -16,34 +25,14 @@ namespace MyConsole
         {
             RegisterContainer();
 
-            //IProfile profile = new FakeProfile();
-            ////IProfile profile = new ProfileRepo();
-            //IHash hash = new FakeHash();
-            ////IHash hash = new Sha256Adapter();
-            //IOtpService otpService = new FakeOtp();
-            ////IOtp otpService = new OtpService();
-            //IFailedCounter failedCounter = new FakeFailedCounter();
-            ////IFailedCounter failedCounter = new FailedCounter();
-            //ILogger logger = new ConsoleAdapter();
-            ////ILogger logger = new NLogAdapter();
-            //INotification notification = new FakeSlack();
-            ////INotification notification = new SlackAdapter();
-
-            //var authenticationService =
-            //    new AuthenticationService(profile, hash, otpService);
-
-            //var notificationDecorator = new NotificationDecorator(authenticationService, notification);
-            //var failedCounterDecorator = new FailedCounterDecorator(failedCounter, notificationDecorator);
-            //var logDecorator = new LogFailedCountDecorator(failedCounterDecorator, failedCounter, logger);
-
-            //var finalAuthentication = logDecorator;
-
-            IAuthentication authentication = _container.Resolve<IAuthentication>();
-            var isValid = authentication.Verify("joey", "pw", "123457");
-
-            Console.WriteLine(isValid);
-
-            //var isValid = finalAuthentication.Verify("joey", "pw", "123456");
+            var wallet = _container.Resolve<IWallet>();
+            //var wallet = new Wallet();
+            Console.WriteLine(wallet.CreateGuid("Joey", 91));
+            Console.WriteLine(wallet.CreateGuid("Joey", 91));
+            Console.WriteLine(wallet.CreateGuid("Tom", 66));
+            Console.WriteLine(wallet.CreateGuid("Joey", 91));
+            //IAuthentication authentication = _container.Resolve<IAuthentication>();
+            //var isValid = authentication.Verify("joey", "pw", "123457");
 
             //Console.WriteLine(isValid);
         }
@@ -51,6 +40,15 @@ namespace MyConsole
         private static void RegisterContainer()
         {
             var containerBuilder = new ContainerBuilder();
+
+            containerBuilder.RegisterType<Wallet>()
+                            .As<IWallet>()
+                            .EnableInterfaceInterceptors()
+                            .InterceptedBy(typeof(CacheInterceptor));
+
+            containerBuilder.RegisterType<CacheInterceptor>();
+            containerBuilder.RegisterType<MemoryCacheProvider>()
+                            .As<ICacheProvider>();
 
             containerBuilder.RegisterType<FakeHash>()
                             .As<IHash>();
