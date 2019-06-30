@@ -14,7 +14,7 @@ namespace MyConsole
 
         static void Main(string[] args)
         {
-            RegisterContainer(); 
+            RegisterContainer();
 
             //IProfile profile = new FakeProfile();
             ////IProfile profile = new ProfileRepo();
@@ -37,7 +37,6 @@ namespace MyConsole
             //var logDecorator = new LogFailedCountDecorator(failedCounterDecorator, failedCounter, logger);
 
             //var finalAuthentication = logDecorator;
-
 
             IAuthentication authentication = _container.Resolve<IAuthentication>();
             var isValid = authentication.Verify("joey", "pw", "123457");
@@ -72,8 +71,31 @@ namespace MyConsole
             containerBuilder.RegisterDecorator<NotificationDecorator, IAuthentication>();
             containerBuilder.RegisterDecorator<FailedCounterDecorator, IAuthentication>();
             containerBuilder.RegisterDecorator<LogFailedCountDecorator, IAuthentication>();
+            containerBuilder.RegisterDecorator<LogMethodInfoDecorator, IAuthentication>();
 
             _container = containerBuilder.Build();
+        }
+    }
+
+    internal class LogMethodInfoDecorator : BaseAuthenticationDecorator
+    {
+        private readonly ILogger _logger;
+
+        public LogMethodInfoDecorator(IAuthentication authentication, ILogger logger) : base(authentication)
+        {
+            _logger = logger;
+        }
+
+        public override bool Verify(string accountId, string password, string otp)
+        {
+            var message = $"{nameof(AuthenticationService)}.{nameof(Verify)}:{accountId} | {password} |{otp}";
+            _logger.Info(message);
+
+            var isValid = base.Verify(accountId, password, otp);
+
+            _logger.Info($"{accountId} isValid: {isValid.ToString()}");
+
+            return isValid;
         }
     }
 
