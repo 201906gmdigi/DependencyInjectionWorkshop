@@ -32,11 +32,13 @@ namespace DependencyInjectionWorkshopTests
             _profile = Substitute.For<IProfile>();
 
             var authenticationService =
-                new AuthenticationService(_logger, _profile, _hash, _failedCounter, _otpService);
+                new AuthenticationService(_profile, _hash, _otpService);
 
             var notificationDecorator = new NotificationDecorator(authenticationService, _notification);
 
-            _authentication = new FailedCounterDecorator(_failedCounter, notificationDecorator);
+            var failedCounterDecorator = new FailedCounterDecorator(_failedCounter, notificationDecorator);
+
+            _authentication = new LogFailedCountDecorator(failedCounterDecorator, _failedCounter, _logger);
         }
 
         [Test]
